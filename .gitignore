@@ -52,3 +52,12 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Vim stuff
+*.*.swp
+
+# iPython Notebook Stuff
+.ipynb_checkpoints
+
+# MacOSX stuff
+*.DS_Store
