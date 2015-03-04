@@ -298,7 +298,7 @@ class SineDVR(DVR):
                    - 1./np.square(np.cos(_xi + _xj))))
         K[self.n, self.n] = 0.
         K += np.diag(2./3. * (self.npts + 1.)**2. + 1./3.
-                     - np.power(np.cos(np.pi * self.x / self.npts), -2.)) / (self.npts**2.)
+                     - np.power(np.cos(np.pi * self.x / self.npts), -2.))
         K *= np.pi**2. / 2.
         K *= 0.5   # p^2/2/m
         V = np.diag(V(self.x))
