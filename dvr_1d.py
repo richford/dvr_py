@@ -269,15 +269,12 @@ class SincDVRPeriodic(SincDVR):
 #         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
 
 class SineDVR(DVR):
-    def __init__(self, npts, x0=0.):
+    def __init__(self, npts, xmin=-1., xmax=1.):
         self.npts = npts
-        self.x0 = float(x0)
-        self.n = np.arange(npts)
-        self.x = np.arange(-0.5*(npts - 1), 0.5*npts, dtype=np.float64)
-        self.a = float(npts) / (float(npts) + 1.)
-        self.x *= self.a
-        self.x += self.x0
-        self.L = self.x.max() - self.x.min()
+        self.L = float(xmax) - float(xmin)
+        self.a = self.L / float(npts)
+        self.n = np.arange(1, npts)
+        self.x = float(xmin) + self.a * self.n
         self.k_max = None
 
     def h(self, V):
@@ -289,17 +286,15 @@ class SineDVR(DVR):
         """
         _i = self.n[:, None]
         _j = self.n[None, :]
-        _xi = self.x[:, None] * np.pi / (2. * self.npts)
-        _xj = self.x[None, :] * np.pi / (2. * self.npts)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            K = ((-1.)**(_i-_j) / self.npts**2.
-                * (1./np.square(np.sin(_xi-_xj)) 
-                   - 1./np.square(np.cos(_xi + _xj))))
-        K[self.n, self.n] = 0.
-        K += np.diag(2./3. * (self.npts + 1.)**2. + 1./3.
-                     - np.power(np.cos(np.pi * self.x / self.npts), -2.))
-        K *= np.pi**2. / 2.
+            K = ((-1.)**(_i-_j)
+                * (1./np.square(np.sin(np.pi / (2. * self.npts) * (_i-_j))) 
+                - 1./np.square(np.sin(np.pi / (2. * self.npts) * (_i+_j)))))
+        K[self.n - 1, self.n - 1] = 0.
+        K += np.diag((2. * self.npts**2. + 1.) / 3.
+                     - 1./np.square(np.sin(np.pi * self.n / self.npts)))
+        K *= np.pi**2. / 2. / self.L**2. #prefactor common to all of K
         K *= 0.5   # p^2/2/m
         V = np.diag(V(self.x))
         return K + V
