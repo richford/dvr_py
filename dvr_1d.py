@@ -9,6 +9,7 @@ Light and Carrington, Adv. Chem. Phys. 114, 263 (2000)
 from matplotlib import pyplot as plt
 import numpy as np
 import scipy.sparse.linalg as sla
+import scipy.special.orthogonal as ortho
 import warnings
 
 class DVR(object):
@@ -42,16 +43,21 @@ class DVR(object):
         return
 
     def test_potential(self, V, num_eigs = 5, **kwargs):
+        h = self.h(V)
         # Get the eigenpairs
         # There are multiple options here. 
-        # np.linalg.eigh() will compute all eigenvalues, like so
-        # But we don't need all eigenvalues, only the smallest ones.
-        # So when the size of the H matrix becomes large enough, it is
+        # If the user is asking for all of the eigenvalues, 
+        # then we need to use np.linalg.eigh()
+        if num_eigs == h.shape[0]:
+            E, U = np.linalg.eigh(h)
+        # But if we don't need all eigenvalues, only the smallest ones,
+        # then when the size of the H matrix becomes large enough, it is
         # better to use sla.eigsh() with a shift-invert method. Here we
         # have to have a good guess for the smallest eigenvalue so we
         # ask for eigenvalues closest to the minimum of the potential.
-        E, U = sla.eigsh(self.h(V), k=num_eigs, which='LM', 
-                         sigma=V(self.x).min())
+        else:
+            E, U = sla.eigsh(h, k=num_eigs, which='LM', 
+                             sigma=V(self.x).min())
 
         xmin = kwargs.get('xmin', self.x.min())
         xmax = kwargs.get('xmax', self.x.max())
@@ -73,7 +79,7 @@ class DVR(object):
     def square_well_test(self, precision=8):
         print 'Testing 1-D DVR with a square-well potential'
         vF = VFactory()
-        V = vF.square_well(depth=1.0e20, width=10.)
+        V = vF.square_well(depth=9./2., width=10.)
         self.test_potential(V, num_eigs=5, precision=precision, 
                             xmin=-10., xmax=10., 
                             ymin=-0.25, ymax=2.)
@@ -131,7 +137,7 @@ class DVR(object):
         self.sombrero_test(precision=precision)
         self.woods_saxon_test(precision=precision)
 
-class SincDVR1D(DVR):
+class SincDVR(DVR):
     r"""Sinc function basis for non-periodic functions over an interval
     `x0 +- L/2` with `N` points.
     Usage:
@@ -169,8 +175,8 @@ class SincDVR1D(DVR):
         _n = self.n[None, :]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            K = 2.*(-1)**(_m-_n)/(_m-_n)**2/self.a**2
-        K[self.n, self.n] = np.pi**2/3/self.a**2
+            K = 2. * (-1.)**(_m-_n) / (_m-_n)**2. / self.a**2.
+        K[self.n, self.n] = np.pi**2. / 3. / self.a**2.
         K *= 0.5   # p^2/2/m
         V = np.diag(V(self.x))
         return K + V
@@ -184,12 +190,12 @@ class SincDVR1D(DVR):
         x_n = self.x[None, :]
         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
 
-class SincDVRPeriodic(SincDVR1D):
+class SincDVRPeriodic(SincDVR):
     r"""Sinc function basis for periodic functions over an interval
     `x0 +- L/2` with `N` points."""
     def __init__(self, *v, **kw):
         # Small shift here for consistent abscissa
-        sincDVR1D.__init__(self, *v, **kw)
+        SincDVR.__init__(self, *v, **kw)
         self.x -= self.a/2.
         
     def h(self, V):
@@ -203,12 +209,12 @@ class SincDVRPeriodic(SincDVR1D):
         _n = self.n[None, :]
         _arg = np.pi*(_m-_n)/self.npts
         if (0 == self.npts % 2):
-            K = 2.*(-1)**(_m-_n)/np.sin(_arg)**2
-            K[self.n, self.n] = (self.npts**2 + 2.)/3.
+            K = 2.*(-1.)**(_m-_n)/np.sin(_arg)**2.
+            K[self.n, self.n] = (self.npts**2. + 2.)/3.
         else:
-            K = 2.*(-1)**(_m-_n)*np.cos(_arg)/np.sin(_arg)**2
-            K[self.n, self.n] = (self.npts**2 - 1.)/3.
-        K *= 0.5*(np.pi/self.L)**2   # p^2/2/m
+            K = 2.*(-1.)**(_m-_n)*np.cos(_arg)/np.sin(_arg)**2.
+            K[self.n, self.n] = (self.npts**2. - 1.)/3.
+        K *= 0.5*(np.pi/self.L)**2.   # p^2/2/m
         V = np.diag(V(self.x))
         return K + V
 
@@ -224,45 +230,7 @@ class SincDVRPeriodic(SincDVR1D):
             f *= np.exp(-1j*np.pi*(x_m-x_n)/self.L)
         return f
 
-class LagrangeFourierDVR(DVR):
-    def __init__(self, npts, x0=0.):
-        L = float(L)
-        self.npts = npts
-        self.L = L
-        self.x0 = x0
-        self.a = L / npts
-        self.n = np.arange(npts, dtype=np.float64)
-        self.x = np.arange(-0.5 * (npts - 1), 0.5 * npts, dtype=np.float64)
-        self.w = np.ones(npts, dtype=np.float64)
-        self.k_max = np.pi/self.a
-
-    def h(self, V):
-        """Return the Hamiltonian with the given potential.
-        Usage:
-            H = self.h(V)
-
-        @param[in] V potential
-        """
-        _m = self.n[:, None]
-        _n = self.n[None, :]
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            K = 2.*(-1)**(_m-_n)/(_m-_n)**2/self.a**2
-        K[self.n, self.n] = np.pi**2/3/self.a**2
-        K *= 0.5   # p^2/2/m
-        V = np.diag(V(self.x))
-        return K + V
-
-    def f(self, x=None):
-        """Return the DVR basis vectors"""
-        if x is None:
-            x_m = self.x[:, None]
-        else:
-            x_m = np.asarray(x)[:, None]
-        x_n = self.x[None, :]
-        return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
-
-# class HermiteDVR(DVR):
+# class FourierDVR(DVR):
 #     def __init__(self, npts, x0=0.):
 #         L = float(L)
 #         self.npts = npts
@@ -300,7 +268,144 @@ class LagrangeFourierDVR(DVR):
 #         x_n = self.x[None, :]
 #         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
 
-# class ChebDVR1D(DVR):
+class SineDVR(DVR):
+    def __init__(self, npts, x0=0.):
+        self.npts = npts
+        self.x0 = float(x0)
+        self.n = np.arange(npts)
+        self.x = np.arange(-0.5*(npts - 1), 0.5*npts, dtype=np.float64)
+        self.a = float(npts) / (float(npts) + 1.)
+        self.x *= self.a
+        self.x += self.x0
+        self.L = self.x.max() - self.x.min()
+        self.k_max = None
+
+    def h(self, V):
+        """Return the Hamiltonian with the given potential.
+        Usage:
+            H = self.h(V)
+
+        @param[in] V potential
+        """
+        _i = self.n[:, None]
+        _j = self.n[None, :]
+        _xi = self.x[:, None] * np.pi / (2. * self.npts)
+        _xj = self.x[None, :] * np.pi / (2. * self.npts)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            K = ((-1.)**(_i-_j) / self.npts**2.
+                * (1./np.square(np.sin(_xi-_xj)) 
+                   - 1./np.square(np.cos(_xi + _xj))))
+        K[self.n, self.n] = 0.
+        K += np.diag(2./3. * (self.npts + 1.)**2. + 1./3.
+                     - np.power(np.cos(np.pi * self.x / self.npts), -2.)) / (self.npts**2.)
+        K *= np.pi**2. / 2.
+        K *= 0.5   # p^2/2/m
+        V = np.diag(V(self.x))
+        return K + V
+
+#     def f(self, x=None):
+#         """Return the DVR basis vectors"""
+#         if x is None:
+#             x_m = self.x[:, None]
+#         else:
+#             x_m = np.asarray(x)[:, None]
+#         x_n = self.x[None, :]
+#         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
+
+class HermiteDVR(DVR):
+    def __init__(self, npts, x0=0.):
+        assert (npts < 269), \
+            "Must make npts < 269 for python to find quadrature points."
+        self.npts = npts
+        self.x0 = float(x0)
+        self.n = np.arange(npts)
+        c = np.zeros(npts+1)
+        c[-1] = 1.
+        self.x = np.polynomial.hermite.hermroots(c)
+        self.x += self.x0
+        self.w = np.exp(-np.square(self.x))
+        self.L = self.x.max() - self.x.min()
+        self.a = None
+        self.k_max = None
+
+    def h(self, V):
+        """Return the Hamiltonian with the given potential.
+        Usage:
+            H = self.h(V)
+
+        @param[in] V potential
+        """
+        _i = self.n[:, None]
+        _j = self.n[None, :]
+        _xi = self.x[:, None]
+        _xj = self.x[None, :]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            K = 2.*(-1.)**(_i-_j)/(_xi-_xj)**2.
+        K[self.n, self.n] = 0.
+        K += np.diag((2. * self.npts + 1. 
+                      - np.square(self.x)) / 3.)
+        K *= 0.5   # p^2/2/m
+        V = np.diag(V(self.x))
+        return K + V
+
+#     def f(self, x=None):
+#         """Return the DVR basis vectors"""
+#         if x is None:
+#             x_m = self.x[:, None]
+#         else:
+#             x_m = np.asarray(x)[:, None]
+#         x_n = self.x[None, :]
+#         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
+
+# class GaussianDVR(DVR):
+#     def __init__(self, npts, x0=0.):
+#         assert (npts < 269), \
+#             "Must make npts < 269 for python to find quadrature points."
+#         self.npts = npts
+#         self.x0 = float(x0)
+#         self.n = np.arange(npts)
+#         c = np.zeros(npts+1)
+#         c[-1] = 1.
+#         self.x = np.polynomial.hermite.hermroots(c)
+#         self.x += self.x0
+#         self.w = np.exp(-np.square(self.x))
+#         self.L = self.x.max() - self.x.min()
+#         self.a = None
+#         self.k_max = None
+
+#     def h(self, V):
+#         """Return the Hamiltonian with the given potential.
+#         Usage:
+#             H = self.h(V)
+
+#         @param[in] V potential
+#         """
+#         _i = self.n[:, None]
+#         _j = self.n[None, :]
+#         _m = self.x[:, None]
+#         _n = self.x[None, :]
+#         with warnings.catch_warnings():
+#             warnings.simplefilter("ignore")
+#             K = 2.*(-1)**(_i-_j)/(_m-_n)**2.
+#         K[self.n, self.n] = 0.
+#         K += np.diag((2. * self.npts + 1. 
+#                       - np.square(self.x)) / 3.)
+#         K *= 0.5   # p^2/2/m
+#         V = np.diag(V(self.x))
+#         return K + V
+
+#     def f(self, x=None):
+#         """Return the DVR basis vectors"""
+#         if x is None:
+#             x_m = self.x[:, None]
+#         else:
+#             x_m = np.asarray(x)[:, None]
+#         x_n = self.x[None, :]
+#         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
+
+# class ChebDVR(DVR):
 #     def __init__(self, npts, xmin, xmax):
 #         delta = float(xmax) - float(xmin)
 #         self.npts = npts
