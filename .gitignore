@@ -56,8 +56,11 @@ target/
 # Vim stuff
 *.*.swp
 
-# iPython Notebook Stuff
+# iPython Notebook stuff
 .ipynb_checkpoints
 
 # MacOSX stuff
 *.DS_Store
+
+# Project specific stuff
+DVR_Demo_Forbes.ipynb

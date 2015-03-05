@@ -175,11 +175,11 @@ class SincDVR(DVR):
         _n = self.n[None, :]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            K = 2. * (-1.)**(_m-_n) / (_m-_n)**2. / self.a**2.
-        K[self.n, self.n] = np.pi**2. / 3. / self.a**2.
-        K *= 0.5   # p^2/2/m
+            T = 2. * (-1.)**(_m-_n) / (_m-_n)**2. / self.a**2.
+        T[self.n, self.n] = np.pi**2. / 3. / self.a**2.
+        T *= 0.5   # p^2/2/m
         V = np.diag(V(self.x))
-        return K + V
+        return T + V
 
     def f(self, x=None):
         """Return the DVR basis vectors"""
@@ -209,14 +209,14 @@ class SincDVRPeriodic(SincDVR):
         _n = self.n[None, :]
         _arg = np.pi*(_m-_n)/self.npts
         if (0 == self.npts % 2):
-            K = 2.*(-1.)**(_m-_n)/np.sin(_arg)**2.
-            K[self.n, self.n] = (self.npts**2. + 2.)/3.
+            T = 2.*(-1.)**(_m-_n)/np.sin(_arg)**2.
+            T[self.n, self.n] = (self.npts**2. + 2.)/3.
         else:
-            K = 2.*(-1.)**(_m-_n)*np.cos(_arg)/np.sin(_arg)**2.
-            K[self.n, self.n] = (self.npts**2. - 1.)/3.
-        K *= 0.5*(np.pi/self.L)**2.   # p^2/2/m
+            T = 2.*(-1.)**(_m-_n)*np.cos(_arg)/np.sin(_arg)**2.
+            T[self.n, self.n] = (self.npts**2. - 1.)/3.
+        T *= 0.5*(np.pi/self.L)**2.   # p^2/2/m
         V = np.diag(V(self.x))
-        return K + V
+        return T + V
 
     def f(self, x=None):
         """Return the DVR basis vectors"""
@@ -253,11 +253,11 @@ class SincDVRPeriodic(SincDVR):
 #         _n = self.n[None, :]
 #         with warnings.catch_warnings():
 #             warnings.simplefilter("ignore")
-#             K = 2.*(-1)**(_m-_n)/(_m-_n)**2/self.a**2
-#         K[self.n, self.n] = np.pi**2/3/self.a**2
-#         K *= 0.5   # p^2/2/m
+#             T = 2.*(-1)**(_m-_n)/(_m-_n)**2/self.a**2
+#         T[self.n, self.n] = np.pi**2/3/self.a**2
+#         T *= 0.5   # p^2/2/m
 #         V = np.diag(V(self.x))
-#         return K + V
+#         return T + V
 
 #     def f(self, x=None):
 #         """Return the DVR basis vectors"""
@@ -288,16 +288,16 @@ class SineDVR(DVR):
         _j = self.n[None, :]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            K = ((-1.)**(_i-_j)
+            T = ((-1.)**(_i-_j)
                 * (1./np.square(np.sin(np.pi / (2. * self.npts) * (_i-_j))) 
                 - 1./np.square(np.sin(np.pi / (2. * self.npts) * (_i+_j)))))
-        K[self.n - 1, self.n - 1] = 0.
-        K += np.diag((2. * self.npts**2. + 1.) / 3.
+        T[self.n - 1, self.n - 1] = 0.
+        T += np.diag((2. * self.npts**2. + 1.) / 3.
                      - 1./np.square(np.sin(np.pi * self.n / self.npts)))
-        K *= np.pi**2. / 2. / self.L**2. #prefactor common to all of K
-        K *= 0.5   # p^2/2/m
+        T *= np.pi**2. / 2. / self.L**2. #prefactor common to all of T
+        T *= 0.5   # p^2/2/m
         V = np.diag(V(self.x))
-        return K + V
+        return T + V
 
 #     def f(self, x=None):
 #         """Return the DVR basis vectors"""
@@ -337,13 +337,13 @@ class HermiteDVR(DVR):
         _xj = self.x[None, :]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            K = 2.*(-1.)**(_i-_j)/(_xi-_xj)**2.
-        K[self.n, self.n] = 0.
-        K += np.diag((2. * self.npts + 1. 
+            T = 2.*(-1.)**(_i-_j)/(_xi-_xj)**2.
+        T[self.n, self.n] = 0.
+        T += np.diag((2. * self.npts + 1. 
                       - np.square(self.x)) / 3.)
-        K *= 0.5   # p^2/2/m
+        T *= 0.5   # p^2/2/m
         V = np.diag(V(self.x))
-        return K + V
+        return T + V
 
 #     def f(self, x=None):
 #         """Return the DVR basis vectors"""
@@ -383,13 +383,13 @@ class HermiteDVR(DVR):
 #         _n = self.x[None, :]
 #         with warnings.catch_warnings():
 #             warnings.simplefilter("ignore")
-#             K = 2.*(-1)**(_i-_j)/(_m-_n)**2.
-#         K[self.n, self.n] = 0.
-#         K += np.diag((2. * self.npts + 1. 
+#             T = 2.*(-1)**(_i-_j)/(_m-_n)**2.
+#         T[self.n, self.n] = 0.
+#         T += np.diag((2. * self.npts + 1. 
 #                       - np.square(self.x)) / 3.)
-#         K *= 0.5   # p^2/2/m
+#         T *= 0.5   # p^2/2/m
 #         V = np.diag(V(self.x))
-#         return K + V
+#         return T + V
 
 #     def f(self, x=None):
 #         """Return the DVR basis vectors"""
@@ -426,10 +426,10 @@ class HermiteDVR(DVR):
 #         """
 #         # Work in more "natural" units
 #         h = m = 1.
-#         K = np.square(self.n * np.pi / delta) * h * h / (2. * m)
-#         K = np.diag(K)
+#         T = np.square(self.n * np.pi / delta) * h * h / (2. * m)
+#         T = np.diag(T)
 #         V = np.diag(V(self.x))
-#         return K + V
+#         return T + V
 
 #     def f(self, x=None):
 #         """Return the DVR basis vectors"""
