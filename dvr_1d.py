@@ -13,6 +13,27 @@ import scipy.special.orthogonal as ortho
 import warnings
 
 class DVR(object):
+    def v(self, V):
+        """Return the potential matrix with the given potential.
+        Usage:
+            v_matrix = self.v(V)
+
+        @param[in] V potential function
+        @returns v_matrix potential matrix
+        """
+        v_matrix = np.diag(V(self.x))
+        return v_matrix
+
+    def h(self, V):
+        """Return the hamiltonian matrix with the given potential.
+        Usage:
+            H = self.h(V)
+
+        @param[in] V potential function
+        @returns H potential matrix
+        """
+        return self.t() + self.v(V)
+
     def dvr2fbr(DVR, T):
         """Transform a matrix from the discrete variable representation
         to the finite basis representation"""
@@ -73,16 +94,33 @@ class DVR(object):
                   xmin=xmin, xmax=xmax,
                   ymin=ymin, ymax=ymax, 
                   doshow=True)
+        return
 
+    def inf_square_well_test(self, precision=8):
+        print 'Testing 1-D DVR with an infinite square-well potential'
+        vF = VFactory()
+        V = vF.square_well(depth=1e30, width=10.)
+        self.test_potential(V, num_eigs=5, precision=precision, 
+                            xmin=-10., xmax=10., 
+                            ymin=-0.25, ymax=2.)
+        e_exact = np.square(np.arange(1,6)) * np.pi**2. / 2. / 10.**2.
+        print "Compare to the exact energies:"
+        print np.array_str(e_exact, precision=precision)
+        print
         return
 
     def square_well_test(self, precision=8):
-        print 'Testing 1-D DVR with a square-well potential'
+        print 'Testing 1-D DVR with a finite square-well potential'
         vF = VFactory()
         V = vF.square_well(depth=9./2., width=10.)
         self.test_potential(V, num_eigs=5, precision=precision, 
                             xmin=-10., xmax=10., 
                             ymin=-0.25, ymax=2.)
+        e_exact = 9./2. * np.array([0.009636, 0.038522, 0.086582, 
+                                    0.153683, 0.239608])
+        print "Compare to these energies:"
+        print np.array_str(e_exact, precision=precision)
+        print "from: http://pilotscholars.up.edu/phy_facpubs/8\n"
         return
 
     def double_well_test(self, precision=8):
@@ -92,6 +130,7 @@ class DVR(object):
         self.test_potential(V, num_eigs=5, precision=precision,
                             xmin=-3.5, xmax=3.5, 
                             ymin=-0.5, ymax=4.)
+        print
         return
 
     def sho_test(self, precision=8):
@@ -101,6 +140,7 @@ class DVR(object):
         self.test_potential(V, num_eigs=5, precision=precision,
                             xmin=-3.5, xmax=3.5, 
                             ymin=0., ymax=6.)
+        print
         return
 
     def morse_test(self, precision=8):
@@ -110,6 +150,7 @@ class DVR(object):
         self.test_potential(V, num_eigs=5, precision=precision,
                             xmin=-3., xmax=32., 
                             ymin=-3., ymax=1.)
+        print
         return
 
     def sombrero_test(self, precision=8):
@@ -118,6 +159,7 @@ class DVR(object):
         V = vF.sombrero(a=-5.)
         self.test_potential(V, num_eigs=5, precision=precision,
                             xmin=-5., xmax=5., ymax=5.)
+        print
         return
 
     def woods_saxon_test(self, precision=8):
@@ -127,6 +169,7 @@ class DVR(object):
         self.test_potential(V, num_eigs=5, precision=precision,
                             xmin=0., xmax=5., 
                             ymin=-50., ymax=0.)
+        print
         return
 
     def test_all(self, precision=8):
@@ -164,12 +207,12 @@ class SincDVR(DVR):
         self.w = np.ones(npts, dtype=np.float64) * self.a
         self.k_max = np.pi/self.a
 
-    def h(self, V):
-        """Return the Hamiltonian with the given potential.
+    def t(self):
+        """Return the kinetic energy matrix.
         Usage:
-            H = self.h(V)
+            T = self.t()
 
-        @param[in] V potential
+        @returns T kinetic energy matrix
         """
         _m = self.n[:, None]
         _n = self.n[None, :]
@@ -178,8 +221,7 @@ class SincDVR(DVR):
             T = 2. * (-1.)**(_m-_n) / (_m-_n)**2. / self.a**2.
         T[self.n, self.n] = np.pi**2. / 3. / self.a**2.
         T *= 0.5   # p^2/2/m
-        V = np.diag(V(self.x))
-        return T + V
+        return T
 
     def f(self, x=None):
         """Return the DVR basis vectors"""
@@ -198,12 +240,12 @@ class SincDVRPeriodic(SincDVR):
         SincDVR.__init__(self, *v, **kw)
         self.x -= self.a/2.
         
-    def h(self, V):
-        """Return the Hamiltonian with the given potential.
+    def t(self):
+        """Return the kinetic energy matrix.
         Usage:
-            H = self.h(V)
+            T = self.t(V)
 
-        @param[in] V potential
+        @returns T kinetic energy matrix
         """
         _m = self.n[:, None]
         _n = self.n[None, :]
@@ -215,8 +257,7 @@ class SincDVRPeriodic(SincDVR):
             T = 2.*(-1.)**(_m-_n)*np.cos(_arg)/np.sin(_arg)**2.
             T[self.n, self.n] = (self.npts**2. - 1.)/3.
         T *= 0.5*(np.pi/self.L)**2.   # p^2/2/m
-        V = np.diag(V(self.x))
-        return T + V
+        return T
 
     def f(self, x=None):
         """Return the DVR basis vectors"""
@@ -230,44 +271,6 @@ class SincDVRPeriodic(SincDVR):
             f *= np.exp(-1j*np.pi*(x_m-x_n)/self.L)
         return f
 
-# class FourierDVR(DVR):
-#     def __init__(self, npts, x0=0.):
-#         L = float(L)
-#         self.npts = npts
-#         self.L = L
-#         self.x0 = x0
-#         self.a = L / npts
-#         self.n = np.arange(npts, dtype=np.float64)
-#         self.x = np.arange(-0.5 * (npts - 1), 0.5 * npts, dtype=np.float64)
-#         self.w = np.ones(npts, dtype=np.float64)
-#         self.k_max = np.pi/self.a
-
-#     def h(self, V):
-#         """Return the Hamiltonian with the given potential.
-#         Usage:
-#             H = self.h(V)
-
-#         @param[in] V potential
-#         """
-#         _m = self.n[:, None]
-#         _n = self.n[None, :]
-#         with warnings.catch_warnings():
-#             warnings.simplefilter("ignore")
-#             T = 2.*(-1)**(_m-_n)/(_m-_n)**2/self.a**2
-#         T[self.n, self.n] = np.pi**2/3/self.a**2
-#         T *= 0.5   # p^2/2/m
-#         V = np.diag(V(self.x))
-#         return T + V
-
-#     def f(self, x=None):
-#         """Return the DVR basis vectors"""
-#         if x is None:
-#             x_m = self.x[:, None]
-#         else:
-#             x_m = np.asarray(x)[:, None]
-#         x_n = self.x[None, :]
-#         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
-
 class SineDVR(DVR):
     def __init__(self, npts, xmin=-1., xmax=1.):
         self.npts = npts
@@ -277,12 +280,12 @@ class SineDVR(DVR):
         self.x = float(xmin) + self.a * self.n
         self.k_max = None
 
-    def h(self, V):
-        """Return the Hamiltonian with the given potential.
+    def t(self):
+        """Return the kinetic energy matrix.
         Usage:
-            H = self.h(V)
+            T = self.t(V)
 
-        @param[in] V potential
+        @returns T kinetic energy matrix
         """
         _i = self.n[:, None]
         _j = self.n[None, :]
@@ -296,8 +299,7 @@ class SineDVR(DVR):
                      - 1./np.square(np.sin(np.pi * self.n / self.npts)))
         T *= np.pi**2. / 2. / self.L**2. #prefactor common to all of T
         T *= 0.5   # p^2/2/m
-        V = np.diag(V(self.x))
-        return T + V
+        return T
 
 #     def f(self, x=None):
 #         """Return the DVR basis vectors"""
@@ -324,12 +326,12 @@ class HermiteDVR(DVR):
         self.a = None
         self.k_max = None
 
-    def h(self, V):
-        """Return the Hamiltonian with the given potential.
+    def t(self):
+        """Return the kinetic energy matrix.
         Usage:
-            H = self.h(V)
+            T = self.t(V)
 
-        @param[in] V potential
+        @returns T kinetic energy matrix
         """
         _i = self.n[:, None]
         _j = self.n[None, :]
@@ -342,8 +344,7 @@ class HermiteDVR(DVR):
         T += np.diag((2. * self.npts + 1. 
                       - np.square(self.x)) / 3.)
         T *= 0.5   # p^2/2/m
-        V = np.diag(V(self.x))
-        return T + V
+        return T
 
 #     def f(self, x=None):
 #         """Return the DVR basis vectors"""
@@ -354,98 +355,11 @@ class HermiteDVR(DVR):
 #         x_n = self.x[None, :]
 #         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
 
-# class GaussianDVR(DVR):
-#     def __init__(self, npts, x0=0.):
-#         assert (npts < 269), \
-#             "Must make npts < 269 for python to find quadrature points."
-#         self.npts = npts
-#         self.x0 = float(x0)
-#         self.n = np.arange(npts)
-#         c = np.zeros(npts+1)
-#         c[-1] = 1.
-#         self.x = np.polynomial.hermite.hermroots(c)
-#         self.x += self.x0
-#         self.w = np.exp(-np.square(self.x))
-#         self.L = self.x.max() - self.x.min()
-#         self.a = None
-#         self.k_max = None
+class GaussianDVR(DVR):
+    pass
 
-#     def h(self, V):
-#         """Return the Hamiltonian with the given potential.
-#         Usage:
-#             H = self.h(V)
-
-#         @param[in] V potential
-#         """
-#         _i = self.n[:, None]
-#         _j = self.n[None, :]
-#         _m = self.x[:, None]
-#         _n = self.x[None, :]
-#         with warnings.catch_warnings():
-#             warnings.simplefilter("ignore")
-#             T = 2.*(-1)**(_i-_j)/(_m-_n)**2.
-#         T[self.n, self.n] = 0.
-#         T += np.diag((2. * self.npts + 1. 
-#                       - np.square(self.x)) / 3.)
-#         T *= 0.5   # p^2/2/m
-#         V = np.diag(V(self.x))
-#         return T + V
-
-#     def f(self, x=None):
-#         """Return the DVR basis vectors"""
-#         if x is None:
-#             x_m = self.x[:, None]
-#         else:
-#             x_m = np.asarray(x)[:, None]
-#         x_n = self.x[None, :]
-#         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
-
-# class ChebDVR(DVR):
-#     def __init__(self, npts, xmin, xmax):
-#         delta = float(xmax) - float(xmin)
-#         self.npts = npts
-#         self.L = delta
-#         self.x0 = (float(xmin) + float(xmax)) / 2.
-#         self.a = delta / npts
-#         self.n = np.arange(1, npts + 1, dtype=np.float64)
-#         self.x = float(xmin) + self.n * delta / (npts + 1.)
-#         self.w = np.ones(npts, dtype=np.float64) * delta / (npts + 1.)
-#         self.k_max = np.pi/self.a
-
-#     def h(self, V):
-#         """Return the Hamiltonian matrix with the given potential
-#         Usage:
-#                 H = self.h(V)
-
-#         Returns the quadrature points, the transformation matrix, the
-#         kinetic energy operator, and the quadrature weights corresponding
-#         to a Chebyshev-based discrete variable representation.
-
-#         @param[in] V potential
-#         @returns H hamiltonian
-#         """
-#         # Work in more "natural" units
-#         h = m = 1.
-#         T = np.square(self.n * np.pi / delta) * h * h / (2. * m)
-#         T = np.diag(T)
-#         V = np.diag(V(self.x))
-#         return T + V
-
-#     def f(self, x=None):
-#         """Return the DVR basis vectors"""
-#         if x is None:
-#             x_m = self.x[:, None]
-#         else:
-#             x_m = np.asarray(x)[:, None]
-#         x_n = self.x[None, :]
-#         return 1
-#     """
-#     Transformation matrix stuff
-#     iv, jv = np.meshgrid(ivec, ivec)
-#     T = np.sin(iv * jv * np.pi / (npts + 1.))
-#     T = T * np.sqrt(2 / (npts + 1.))
-#     """
-
+class ChebDVR(DVR):
+    pass
 
 # Factory functions to build different potentials:
 # A factory is a function that makes a function. 
@@ -453,9 +367,6 @@ class VFactory(object):
     """Factory functions to build different potentials
     A factory is a function that returns other functions.
     """
-    def __init__(self):
-        pass
-
     def square_well(self, depth = 1., width = 1., 
                     origin = 0., o_val = 0.):
         """Usage:
