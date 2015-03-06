@@ -7,6 +7,7 @@ Light and Carrington, Adv. Chem. Phys. 114, 263 (2000)
 """
 
 from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import scipy.sparse.linalg as sla
 import scipy.special.orthogonal as ortho
@@ -66,19 +67,33 @@ class DVR(object):
     def plot(self, V, E, U, **kwargs):
         doshow = kwargs.get('doshow', False)
         nplot = kwargs.get('nplot', 5)
-        xmin = kwargs.get('xmin', self.x.min())
-        xmax = kwargs.get('xmax', self.x.max())
-        ymin = kwargs.get('ymin', np.ceil(V(self.x).min() - 1.))
-        ymax = kwargs.get('ymax', 
-                          np.floor(max(U.max()+E.max()+1., V(self.x).max()+1.)))
-        plt.plot(self.x, V(self.x))
+        xmin = kwargs.get('xmin', self.xy[:,0].min())
+        xmax = kwargs.get('xmax', self.xy[:,0].max())
+        ymin = kwargs.get('ymin', self.xy[:,1].min())
+        ymax = kwargs.get('ymax', self.xy[:,1].max())
+        zmin = kwargs.get('zmin', np.ceil(V(self.xy).min() - 1.))
+        zmax = kwargs.get('zmax', 
+                          np.floor(max(U.max()+E.max()+1., 
+                                   V(self.xy).max()+1.)))
+
+        npts = self.dvr1d.npts
+        xy = self.xy.reshape((npts, npts, 2))
+        vp = V(self.xy).reshape((npts, npts))
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        #ax.plot_wireframe(xy[:,:,0], xy[:,:,1], vp)
         for i in range(nplot):
             if i == 0:
-                plt.plot(self.x, abs(U[:, i])+E[i])
-            else:
-                plt.plot(self.x, U[:, i]+E[i])
-        plt.axis(ymax=ymax, ymin=ymin)
-        plt.axis(xmax=xmax, xmin=xmin)
+                ax.plot_surface(xy[:,:,0], xy[:,:,1], 
+                                abs(U[:, i].reshape((npts, npts))) + E[i], 
+                                alpha=0.5)
+            #else:
+                #ax.plot_surface(xy[:,:,0], xy[:,:,1], 
+                #                U[:, i].reshape((npts, npts)) + E[i], 
+                #                alpha=0.5)
+        #plt.axis(ymax=ymax, ymin=ymin)
+        #plt.axis(xmax=xmax, xmin=xmin)
         if doshow: plt.show()
         return
 
@@ -99,31 +114,40 @@ class DVR(object):
             E, U = sla.eigsh(h, k=num_eigs, which='LM', 
                              sigma=V(self.xy).min())
 
-        xmin = kwargs.get('xmin', self.x.min())
-        xmax = kwargs.get('xmax', self.x.max())
-        ymin = kwargs.get('ymin', np.ceil(V(self.xy).min() - 1.))
-        ymax = kwargs.get('ymax', 
-                          np.floor(max(U.max()+E.max()+1., V(self.xy).max()+1.)))
         precision = kwargs.get('precision', 8)
 
         # Print and plot stuff
         print 'The first {n:d} energies are:'.format(n=num_eigs)
         print np.array_str(E[:num_eigs], precision=precision)
-        #self.plot(V, E, U, nplot=num_eigs, 
-        #          xmin=xmin, xmax=xmax,
-        #          ymin=ymin, ymax=ymax, 
-        #          doshow=True)
-        return
 
-    def sho_test(self, num_eigs=5, precision=8):
+        doshow = kwargs.get('doshow', False)
+        if doshow:
+            xmin = kwargs.get('xmin', self.xy[:,0].min())
+            xmax = kwargs.get('xmax', self.xy[:,0].max())
+            ymin = kwargs.get('ymin', self.xy[:,1].min())
+            ymax = kwargs.get('ymax', self.xy[:,1].max())
+            zmin = kwargs.get('zmin', np.ceil(V(self.xy).min() - 1.))
+            zmax = kwargs.get('zmax', 
+                              np.floor(max(U.max()+E.max()+1., 
+                                       V(self.xy).max()+1.)))
+
+            self.plot(V, E, U, nplot=num_eigs, 
+                      xmin=xmin, xmax=xmax,
+                      ymin=ymin, ymax=ymax, 
+                      zmin=zmin, zmax=zmax,
+                      doshow=doshow)
+        return E, U
+
+    def sho_test(self, num_eigs=5, precision=8, doshow=False):
         print 'Testing 2-D DVR with an SHO potential'
         vF = VFactory()
         V = vF.sho()
-        self.test_potential(V, num_eigs=num_eigs, precision=precision,
-                            xmin=-3.5, xmax=3.5, 
-                            ymin=0., ymax=6.)
+        E, U = self.test_potential(V, doshow=doshow, num_eigs=num_eigs, 
+                                   precision=precision,
+                                   xmin=-3.5, xmax=3.5, 
+                                   ymin=0., ymax=6.)
         print
-        return
+        return E, U
 
 # Factory functions to build different potentials:
 # A factory is a function that makes a function. 
