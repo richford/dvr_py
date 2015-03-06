@@ -10,8 +10,37 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import scipy.sparse.linalg as sla
+import scipy.sparse as sp
 import scipy.special.orthogonal as ortho
 import dvr_1d
+
+# These are the "Tableau 20" colors as RGB.  
+tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),  
+             (44, 160, 44), (152, 223, 138), (214, 39, 40), (255, 152, 150),  
+             (148, 103, 189), (197, 176, 213), (140, 86, 75), (196, 156, 148),  
+             (227, 119, 194), (247, 182, 210), (127, 127, 127), (199, 199, 199),  
+             (188, 189, 34), (219, 219, 141), (23, 190, 207), (158, 218, 229)]
+
+# These are the "Tableau 10 Medium" colors as RGB.  
+tableau10m = [(114, 158, 206), (255, 158, 74), (103, 191, 92), (237, 102, 93), 
+              (173, 139, 201), (168, 120, 110), (237, 151, 202), 
+              (162, 162, 162), (205, 204, 93), (109, 204, 218)]
+
+# These are the Tableau "Color Blind 10" colors as RGB
+colorblind10 = [(0, 107, 164), (255, 128, 14), (171, 171, 171), (89, 89, 89), 
+                (95, 158, 209), (200, 82, 0), (137, 137, 137), (162, 200, 236), 
+                (255, 188, 121), (207, 207, 207)]
+
+
+# Scale the RGB values to [0, 1] range, which is the format matplotlib accepts.  
+for i in range(len(tableau20)):  
+    r, g, b = tableau20[i]  
+    tableau20[i] = (r / 255., g / 255., b / 255.)
+for i in range(len(tableau10m)):
+    r, g, b = tableau10m[i]  
+    tableau10m[i] = (r / 255., g / 255., b / 255.)
+    r, g, b = colorblind10[i]  
+    colorblind10[i] = (r / 255., g / 255., b / 255.)
 
 class DVR(object):
     def __cartesian_product(self, arrays):
@@ -41,7 +70,7 @@ class DVR(object):
         @param[in] V potential function
         @returns v_matrix potential matrix
         """
-        return np.diag(V(self.xy))
+        return sp.diags(diagonals=V(self.xy), offsets=0)
 
     def t(self):
         """Return the kinetic energy matrix.
@@ -51,8 +80,8 @@ class DVR(object):
         @returns T kinetic energy matrix
         """
         t1d = self.dvr1d.t()
-        eye = np.identity(self.dvr1d.npts)
-        return np.kron(eye, t1d) + np.kron(t1d, eye)
+        eye = sp.identity(self.dvr1d.npts)
+        return sp.kron(eye, t1d) + sp.kron(t1d, eye)
 
     def h(self, V):
         """Return the hamiltonian matrix with the given potential.
@@ -67,6 +96,7 @@ class DVR(object):
     def plot(self, V, E, U, **kwargs):
         doshow = kwargs.get('doshow', False)
         nplot = kwargs.get('nplot', 5)
+        uscale = kwargs.get('uscale', 1.)
         xmin = kwargs.get('xmin', self.xy[:,0].min())
         xmax = kwargs.get('xmax', self.xy[:,0].max())
         ymin = kwargs.get('ymin', self.xy[:,1].min())
@@ -80,20 +110,22 @@ class DVR(object):
         xy = self.xy.reshape((npts, npts, 2))
         vp = V(self.xy).reshape((npts, npts))
 
+        colors = tableau20
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        #ax.plot_wireframe(xy[:,:,0], xy[:,:,1], vp)
+        ax.plot_wireframe(xy[:,:,0], xy[:,:,1], vp, alpha=0.5)
         for i in range(nplot):
             if i == 0:
-                ax.plot_surface(xy[:,:,0], xy[:,:,1], 
-                                abs(U[:, i].reshape((npts, npts))) + E[i], 
-                                alpha=0.5)
-            #else:
-                #ax.plot_surface(xy[:,:,0], xy[:,:,1], 
-                #                U[:, i].reshape((npts, npts)) + E[i], 
-                #                alpha=0.5)
-        #plt.axis(ymax=ymax, ymin=ymin)
-        #plt.axis(xmax=xmax, xmin=xmin)
+                ax.plot_wireframe(xy[:,:,0], xy[:,:,1], 
+                    uscale * abs(U[:, i].reshape((npts, npts))) + E[i], 
+                    alpha=0.5, color=colors[i])
+            else:
+                ax.plot_wireframe(xy[:,:,0], xy[:,:,1], 
+                    uscale * U[:, i].reshape((npts, npts)) + E[i], 
+                    alpha=0.5, color=colors[i])
+        ax.set_xlim3d(xmin, xmax)
+        ax.set_ylim3d(ymin, ymax)
+        ax.set_zlim3d(zmin, zmax)
         if doshow: plt.show()
         return
 
@@ -122,6 +154,7 @@ class DVR(object):
 
         doshow = kwargs.get('doshow', False)
         if doshow:
+            uscale = kwargs.get('uscale', 1.)
             xmin = kwargs.get('xmin', self.xy[:,0].min())
             xmax = kwargs.get('xmax', self.xy[:,0].max())
             ymin = kwargs.get('ymin', self.xy[:,1].min())
@@ -135,17 +168,19 @@ class DVR(object):
                       xmin=xmin, xmax=xmax,
                       ymin=ymin, ymax=ymax, 
                       zmin=zmin, zmax=zmax,
-                      doshow=doshow)
+                      uscale=uscale, doshow=doshow)
         return E, U
 
-    def sho_test(self, num_eigs=5, precision=8, doshow=False):
+    def sho_test(self, k = 1., num_eigs=5, precision=8, 
+                 uscale=1., doshow=False):
         print 'Testing 2-D DVR with an SHO potential'
         vF = VFactory()
-        V = vF.sho()
+        V = vF.sho(k=k)
         E, U = self.test_potential(V, doshow=doshow, num_eigs=num_eigs, 
-                                   precision=precision,
+                                   precision=precision, uscale=uscale,
                                    xmin=-3.5, xmax=3.5, 
-                                   ymin=0., ymax=6.)
+                                   ymin=-3.5, ymax=3.5,
+                                   zmin=-0.05, zmax=4.)
         print
         return E, U
 

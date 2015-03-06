@@ -133,11 +133,12 @@ class DVR(object):
         print
         return
 
-    def sho_test(self, precision=8):
+    def sho_test(self, k=1., num_eigs=5, precision=8):
         print 'Testing 1-D DVR with an SHO potential'
         vF = VFactory()
-        V = vF.sho()
-        self.test_potential(V, num_eigs=5, precision=precision,
+        V = vF.sho(k=k)
+        self.test_potential(V, num_eigs=num_eigs, 
+                            precision=precision,
                             xmin=-3.5, xmax=3.5, 
                             ymin=0., ymax=6.)
         print
@@ -311,7 +312,7 @@ class SineDVR(DVR):
 #         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
 
 class HermiteDVR(DVR):
-    def __init__(self, npts, x0=0.):
+    def __init__(self, npts, xmax=None, x0=0.):
         assert (npts < 269), \
             "Must make npts < 269 for python to find quadrature points."
         self.npts = npts
@@ -320,7 +321,12 @@ class HermiteDVR(DVR):
         c = np.zeros(npts+1)
         c[-1] = 1.
         self.x = np.polynomial.hermite.hermroots(c)
-        self.x += self.x0
+        if xmax is None:
+            gamma = 1.
+        else:
+            assert xmax is None, "Sorry, xmax is currently broken"
+            gamma = self.x.max() / float(xmax)
+        self.x = self.x0 + self.x / gamma
         self.w = np.exp(-np.square(self.x))
         self.L = self.x.max() - self.x.min()
         self.a = None
