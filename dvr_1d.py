@@ -276,8 +276,8 @@ class SineDVR(DVR):
     def __init__(self, npts, xmin=-1., xmax=1.):
         self.npts = npts
         self.L = float(xmax) - float(xmin)
-        self.a = self.L / float(npts)
-        self.n = np.arange(1, npts)
+        self.a = self.L / float(npts + 1.)
+        self.n = np.arange(1, npts + 1)
         self.x = float(xmin) + self.a * self.n
         self.k_max = None
 
@@ -290,14 +290,15 @@ class SineDVR(DVR):
         """
         _i = self.n[:, None]
         _j = self.n[None, :]
+        m = self.npts + 1
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             T = ((-1.)**(_i-_j)
-                * (1./np.square(np.sin(np.pi / (2. * self.npts) * (_i-_j))) 
-                - 1./np.square(np.sin(np.pi / (2. * self.npts) * (_i+_j)))))
+                * (1./np.square(np.sin(np.pi / (2. * m) * (_i-_j))) 
+                - 1./np.square(np.sin(np.pi / (2. * m) * (_i+_j)))))
         T[self.n - 1, self.n - 1] = 0.
-        T += np.diag((2. * self.npts**2. + 1.) / 3.
-                     - 1./np.square(np.sin(np.pi * self.n / self.npts)))
+        T += np.diag((2. * m**2. + 1.) / 3.
+                     - 1./np.square(np.sin(np.pi * self.n / m)))
         T *= np.pi**2. / 2. / self.L**2. #prefactor common to all of T
         T *= 0.5   # p^2/2/m
         return T
@@ -314,7 +315,7 @@ class SineDVR(DVR):
 class HermiteDVR(DVR):
     def __init__(self, npts, xmax=None, x0=0.):
         assert (npts < 269), \
-            "Must make npts < 269 for python to find quadrature points."
+            "Must make npts < 269 for numpy to find quadrature points."
         self.npts = npts
         self.x0 = float(x0)
         self.n = np.arange(npts)
@@ -322,11 +323,11 @@ class HermiteDVR(DVR):
         c[-1] = 1.
         self.x = np.polynomial.hermite.hermroots(c)
         if xmax is None:
-            gamma = 1.
+            self.gamma = 1.
         else:
             assert xmax is None, "Sorry, xmax is currently broken"
-            gamma = self.x.max() / float(xmax)
-        self.x = self.x0 + self.x / gamma
+            self.gamma = self.x.max() / float(xmax)
+        self.x = self.x0 + self.x / self.gamma
         self.w = np.exp(-np.square(self.x))
         self.L = self.x.max() - self.x.min()
         self.a = None
@@ -349,6 +350,7 @@ class HermiteDVR(DVR):
         T[self.n, self.n] = 0.
         T += np.diag((2. * self.npts + 1. 
                       - np.square(self.x)) / 3.)
+        T *= self.gamma
         T *= 0.5   # p^2/2/m
         return T
 
