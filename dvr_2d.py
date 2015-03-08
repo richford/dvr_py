@@ -113,16 +113,19 @@ class DVR(object):
         colors = tableau20
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.plot_wireframe(xy[:,:,0], xy[:,:,1], vp, alpha=0.5)
+        ax.plot_surface(xy[:,:,0], xy[:,:,1], vp, alpha=0.15,
+                rstride=2, cstride=2, vmin=zmin, vmax=zmax)
         for i in range(nplot):
             if i == 0:
-                ax.plot_wireframe(xy[:,:,0], xy[:,:,1], 
+                ax.plot_surface(xy[:,:,0], xy[:,:,1], 
                     uscale * abs(U[:, i].reshape((npts, npts))) + E[i], 
-                    alpha=0.5, color=colors[i])
+                    alpha=0.3, color=colors[i],
+                    rstride=2, cstride=2)
             else:
-                ax.plot_wireframe(xy[:,:,0], xy[:,:,1], 
+                ax.plot_surface(xy[:,:,0], xy[:,:,1], 
                     uscale * U[:, i].reshape((npts, npts)) + E[i], 
-                    alpha=0.5, color=colors[i])
+                    alpha=0.3, color=colors[i],
+                    rstride=2, cstride=2)
         ax.set_xlim3d(xmin, xmax)
         ax.set_ylim3d(ymin, ymax)
         ax.set_zlim3d(zmin, zmax)
