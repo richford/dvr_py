@@ -215,8 +215,8 @@ class SincDVR(DVR):
 
         @returns T kinetic energy matrix
         """
-        _m = self.n[:, None]
-        _n = self.n[None, :]
+        _m = self.n[:, np.newaxis]
+        _n = self.n[np.newaxis, :]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             T = 2. * (-1.)**(_m-_n) / (_m-_n)**2. / self.a**2.
@@ -227,10 +227,10 @@ class SincDVR(DVR):
     def f(self, x=None):
         """Return the DVR basis vectors"""
         if x is None:
-            x_m = self.x[:, None]
+            x_m = self.x[:, np.newaxis]
         else:
-            x_m = np.asarray(x)[:, None]
-        x_n = self.x[None, :]
+            x_m = np.asarray(x)[:, np.newaxis]
+        x_n = self.x[np.newaxis, :]
         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
 
 class SincDVRPeriodic(SincDVR):
@@ -248,8 +248,8 @@ class SincDVRPeriodic(SincDVR):
 
         @returns T kinetic energy matrix
         """
-        _m = self.n[:, None]
-        _n = self.n[None, :]
+        _m = self.n[:, np.newaxis]
+        _n = self.n[np.newaxis, :]
         _arg = np.pi*(_m-_n)/self.npts
         if (0 == self.npts % 2):
             T = 2.*(-1.)**(_m-_n)/np.sin(_arg)**2.
@@ -263,10 +263,10 @@ class SincDVRPeriodic(SincDVR):
     def f(self, x=None):
         """Return the DVR basis vectors"""
         if x is None:
-            x_m = self.x[:, None]
+            x_m = self.x[:, np.newaxis]
         else:
-            x_m = np.asarray(x)[:, None]
-        x_n = self.x[None, :]
+            x_m = np.asarray(x)[:, np.newaxis]
+        x_n = self.x[np.newaxis, :]
         f = np.sinc((x_m-x_n)/self.a)/np.sinc((x_m-x_n)/self.L)/np.sqrt(self.a)
         if (0 == self.npts % 2):
             f *= np.exp(-1j*np.pi*(x_m-x_n)/self.L)
@@ -288,8 +288,8 @@ class SineDVR(DVR):
 
         @returns T kinetic energy matrix
         """
-        _i = self.n[:, None]
-        _j = self.n[None, :]
+        _i = self.n[:, np.newaxis]
+        _j = self.n[np.newaxis, :]
         m = self.npts + 1
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -306,10 +306,10 @@ class SineDVR(DVR):
 #     def f(self, x=None):
 #         """Return the DVR basis vectors"""
 #         if x is None:
-#             x_m = self.x[:, None]
+#             x_m = self.x[:, np.newaxis]
 #         else:
-#             x_m = np.asarray(x)[:, None]
-#         x_n = self.x[None, :]
+#             x_m = np.asarray(x)[:, np.newaxis]
+#         x_n = self.x[np.newaxis, :]
 #         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
 
 class HermiteDVR(DVR):
@@ -340,10 +340,10 @@ class HermiteDVR(DVR):
 
         @returns T kinetic energy matrix
         """
-        _i = self.n[:, None]
-        _j = self.n[None, :]
-        _xi = self.x[:, None]
-        _xj = self.x[None, :]
+        _i = self.n[:, np.newaxis]
+        _j = self.n[np.newaxis, :]
+        _xi = self.x[:, np.newaxis]
+        _xj = self.x[np.newaxis, :]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             T = 2.*(-1.)**(_i-_j)/(_xi-_xj)**2.
@@ -357,10 +357,10 @@ class HermiteDVR(DVR):
 #     def f(self, x=None):
 #         """Return the DVR basis vectors"""
 #         if x is None:
-#             x_m = self.x[:, None]
+#             x_m = self.x[:, np.newaxis]
 #         else:
-#             x_m = np.asarray(x)[:, None]
-#         x_n = self.x[None, :]
+#             x_m = np.asarray(x)[:, np.newaxis]
+#         x_n = self.x[np.newaxis, :]
 #         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
 
 class GaussianDVR(DVR):

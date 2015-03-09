@@ -113,8 +113,9 @@ class DVR(object):
         colors = tableau20
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.plot_surface(xy[:,:,0], xy[:,:,1], vp, alpha=0.15,
-                rstride=2, cstride=2, vmin=zmin, vmax=zmax)
+        
+        ax.plot_surface(xy[:,:,0], xy[:,:,1], vp, 
+                alpha=0.15, rstride=2, cstride=2)
         for i in range(nplot):
             if i == 0:
                 ax.plot_surface(xy[:,:,0], xy[:,:,1], 
