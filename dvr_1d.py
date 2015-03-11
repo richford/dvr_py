@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import scipy.sparse.linalg as sla
 import scipy.special.orthogonal as ortho
+import bessel
 import warnings
 
 class DVR(object):
@@ -133,14 +134,15 @@ class DVR(object):
         print
         return
 
-    def sho_test(self, k=1., num_eigs=5, precision=8):
+    def sho_test(self, k=1., num_eigs=5, precision=8, 
+            xmin=-3.5, xmax=3.5, ymin=0., ymax=6.):
         print 'Testing 1-D DVR with an SHO potential'
         vF = VFactory()
         V = vF.sho(k=k)
         self.test_potential(V, num_eigs=num_eigs, 
                             precision=precision,
-                            xmin=-3.5, xmax=3.5, 
-                            ymin=0., ymax=6.)
+                            xmin=xmin, xmax=xmax, 
+                            ymin=ymin, ymax=ymax)
         print
         return
 
@@ -183,11 +185,11 @@ class DVR(object):
 
 class SincDVR(DVR):
     r"""Sinc function basis for non-periodic functions over an interval
-    `x0 +- L/2` with `N` points.
+    `x0 +- L/2` with `npts` points.
     Usage:
-        d = sincDVR1D(N, L, [x0])
+        d = sincDVR1D(npts, L, [x0])
 
-    @param[in] N number of points
+    @param[in] npts number of points
     @param[in] L size of interval
     @param[in] x0 origin offset (default=0)
     @attribute a step size
@@ -208,7 +210,7 @@ class SincDVR(DVR):
         self.w = np.ones(npts, dtype=np.float64) * self.a
         self.k_max = np.pi/self.a
 
-    def t(self):
+    def t(self, hc=1., mc2=1.):
         """Return the kinetic energy matrix.
         Usage:
             T = self.t()
@@ -221,8 +223,25 @@ class SincDVR(DVR):
             warnings.simplefilter("ignore")
             T = 2. * (-1.)**(_m-_n) / (_m-_n)**2. / self.a**2.
         T[self.n, self.n] = np.pi**2. / 3. / self.a**2.
-        T *= 0.5   # p^2/2/m
+        T *= 0.5 * hc**2. / mc2   # (pc)^2 / (2 mc^2)
         return T
+
+    def ip(self, hbar=1.):
+        """Return the momentum matrix times i (imaginary number)
+        i.e. ip = hbar frac{d}{dx}
+        Usage:
+            iP = self.p()
+
+        @returns iP momentum matrix times i (imaginary number)
+        """
+        _m = self.n[:, np.newaxis]
+        _n = self.n[np.newaxis, :]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            iP = (-1.)**(_m-_n) / (_m-_n) / self.a
+        iP[self.n, self.n] = 0.
+        iP *= hbar
+        return iP
 
     def f(self, x=None):
         """Return the DVR basis vectors"""
@@ -241,7 +260,7 @@ class SincDVRPeriodic(SincDVR):
         SincDVR.__init__(self, *v, **kw)
         self.x -= self.a/2.
         
-    def t(self):
+    def t(self, hc=1., mc2=1.):
         """Return the kinetic energy matrix.
         Usage:
             T = self.t(V)
@@ -257,7 +276,8 @@ class SincDVRPeriodic(SincDVR):
         else:
             T = 2.*(-1.)**(_m-_n)*np.cos(_arg)/np.sin(_arg)**2.
             T[self.n, self.n] = (self.npts**2. - 1.)/3.
-        T *= 0.5*(np.pi/self.L)**2.   # p^2/2/m
+        T *= (np.pi/self.L)**2.
+        T *= 0.5 * hc**2. / mc2   # (pc)^2 / (2 mc^2)
         return T
 
     def f(self, x=None):
@@ -273,6 +293,22 @@ class SincDVRPeriodic(SincDVR):
         return f
 
 class SineDVR(DVR):
+    r"""Sine function basis for non-periodic functions over an interval
+    `x_min ... x_max` with `npts` points.
+    Usage:
+        d = sincDVR1D(npts, xmin, xmax)
+
+    @param[in] npts number of points
+    @param[in] xmin "left" end of interval
+    @param[in] xmax "right" end of interval
+    @attribute a step size
+    @attribute n vector of x-domain indices
+    @attribute x discretized x-domain
+    @attribute k_max cutoff frequency
+    @attribute L size of x-domain
+    @method h return hamiltonian matrix
+    @method f return DVR basis vectors
+    """
     def __init__(self, npts, xmin=-1., xmax=1.):
         self.npts = npts
         self.L = float(xmax) - float(xmin)
@@ -281,7 +317,7 @@ class SineDVR(DVR):
         self.x = float(xmin) + self.a * self.n
         self.k_max = None
 
-    def t(self):
+    def t(self, hc=1., mc2=1.):
         """Return the kinetic energy matrix.
         Usage:
             T = self.t(V)
@@ -300,7 +336,7 @@ class SineDVR(DVR):
         T += np.diag((2. * m**2. + 1.) / 3.
                      - 1./np.square(np.sin(np.pi * self.n / m)))
         T *= np.pi**2. / 2. / self.L**2. #prefactor common to all of T
-        T *= 0.5   # p^2/2/m
+        T *= 0.5 * hc**2. / mc2   # (pc)^2 / (2 mc^2)
         return T
 
 #     def f(self, x=None):
@@ -313,6 +349,23 @@ class SineDVR(DVR):
 #         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
 
 class HermiteDVR(DVR):
+    r"""Hermite function basis for non-periodic functions over an interval
+    `-x_max ... x_max` with `npts` points.
+    Usage:
+        d = sincDVR1D(npts, xmax, [x0])
+
+    @param[in] npts number of points
+    @param[in] xmax "right" end of interval
+    @param[in] x0 shifted center of interval
+    @attribute a step size
+    @attribute n vector of x-domain indices
+    @attribute x discretized x-domain
+    @attribute w quadrature weights
+    @attribute k_max cutoff frequency
+    @attribute L size of x-domain
+    @method h return hamiltonian matrix
+    @method f return DVR basis vectors
+    """
     def __init__(self, npts, xmax=None, x0=0.):
         assert (npts < 269), \
             "Must make npts < 269 for numpy to find quadrature points."
@@ -333,7 +386,7 @@ class HermiteDVR(DVR):
         self.a = None
         self.k_max = None
 
-    def t(self):
+    def t(self, hc=1., mc2=1.):
         """Return the kinetic energy matrix.
         Usage:
             T = self.t(V)
@@ -351,7 +404,7 @@ class HermiteDVR(DVR):
         T += np.diag((2. * self.npts + 1. 
                       - np.square(self.x)) / 3.)
         T *= self.gamma
-        T *= 0.5   # p^2/2/m
+        T *= 0.5 * hc**2. / mc2   # (pc)^2 / (2 mc^2)
         return T
 
 #     def f(self, x=None):
@@ -362,6 +415,75 @@ class HermiteDVR(DVR):
 #             x_m = np.asarray(x)[:, np.newaxis]
 #         x_n = self.x[np.newaxis, :]
 #         return np.sinc((x_m-x_n)/self.a)/np.sqrt(self.a)
+
+class BesselDVR(DVR):
+    r"""Bessel function basis for non-periodic functions over an interval
+    `0 ... R` with `npts` points, `dim` dimensions, `lam` angular 
+    momentum number.
+    Usage:
+        d = sincDVR1D(npts, R, dim, lam)
+
+    @param[in] npts number of points
+    @param[in] R max radius
+    @param[in] dim dimension of the Bessel representation
+    @param[in] lam angular momentum quantum number
+    @attribute n vector of domain indices
+    @attribute z discretized domain
+    @attribute nu
+    @attribute K
+    @attribute r
+    @method h return hamiltonian matrix
+    @method f return DVR basis vectors
+    """
+    def __init__(self, npts, R, dim, lam):
+        assert type(dim) == int, "dim must be an integer."
+        assert dim > 1, "dim must be 2 or more."
+        self.npts = npts
+        self.n = np.arange(npts)
+        self.R = R
+        self.dim = dim
+        self.lam = lam
+        self.__init_private()
+
+    def __init_private(self):
+        self.nu = self.lam + self.dim/2. - 1.
+        self.z = bessel.j_root(nu=self.nu, N=self.npts)
+        self.K = self.z[-1] / self.R
+        self.x = self.z / self. K
+
+    def t(self, hc=1., mc2=1.):
+        """Return the kinetic energy matrix.
+        Usage:
+            T = self.t(V)
+
+        @returns T kinetic energy matrix
+        """
+        n = self.npts
+        nu = self.nu
+        K = self.K
+        
+        _i = self.n[:, np.newaxis]
+        _j = self.n[np.newaxis, :]
+        _xi = self.z[:, np.newaxis]
+        _xj = self.z[np.newaxis, :]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            T = 8. * K**2. * (-1.)**(_i-_j) * _xi * _xj /(_xi**2. - _xj**2.)**2.
+        T[self.n, self.n] = 0.
+        T += np.diag(K**2. / 3. * (1. + 2. * (nu**2. - 1.) / self.z**2.))
+        T *= 0.5 * hc**2. / mc2   # (pc)^2 / (2 mc^2)
+        return T
+
+    def get_T(self,h=1.0,m=1.0):
+        N = self.npts; nu = self.nu; z = self.z; K = self.K
+        T = np.zeros((N,N))
+        for i in range(N):
+            T[i][i] = K**2/3.*(1 + 2*(nu**2-1)/z[i]**2)
+            for j in range(i):
+                T[i][j] = (-1)**(i-j)*8*K**2*z[i]*z[j]/(z[i]**2 - z[j]**2)**2
+                T[j][i] = T[i][j]
+        T = T*h**2/2/m
+        return T 
 
 class GaussianDVR(DVR):
     pass
