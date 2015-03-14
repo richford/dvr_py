@@ -474,17 +474,6 @@ class BesselDVR(DVR):
         T *= 0.5 * hc**2. / mc2   # (pc)^2 / (2 mc^2)
         return T
 
-    def get_T(self,h=1.0,m=1.0):
-        N = self.npts; nu = self.nu; z = self.z; K = self.K
-        T = np.zeros((N,N))
-        for i in range(N):
-            T[i][i] = K**2/3.*(1 + 2*(nu**2-1)/z[i]**2)
-            for j in range(i):
-                T[i][j] = (-1)**(i-j)*8*K**2*z[i]*z[j]/(z[i]**2 - z[j]**2)**2
-                T[j][i] = T[i][j]
-        T = T*h**2/2/m
-        return T 
-
 class GaussianDVR(DVR):
     pass
 
