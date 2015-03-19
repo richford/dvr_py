@@ -146,13 +146,13 @@ class DVR(object):
         print
         return
 
-    def morse_test(self, precision=8):
+    def morse_test(self, precision=8, xmin=0., xmax=32., ymin=-3., ymax=1.):
         print 'Testing 1-D DVR with a Morse potential'
         vF = VFactory()
         V = vF.morse(D=3., a=0.5)
         self.test_potential(V, num_eigs=5, precision=precision,
-                            xmin=-3., xmax=32., 
-                            ymin=-3., ymax=1.)
+                            xmin=xmin, xmax=xmax, 
+                            ymin=ymin, ymax=ymax)
         print
         return
 
