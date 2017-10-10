@@ -90,6 +90,7 @@ class GPESolver(object):
             xin = np.sqrt(self.N)*np.exp(-r**2)*r**((self.dim-1)/2)
         y = newton_krylov(get_dy, xin)
         mu = self.get_mu(y);
+        y = self.normalize(y)
         return y, mu
 
 if __name__=="__main__":

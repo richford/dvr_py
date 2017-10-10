@@ -650,4 +650,5 @@ class VFactory(object):
 
 
 if __name__ == '__main__':
-    test_all()
+    dvr = SincDVR(npts=200, L=14)
+    dvr.test_all()
