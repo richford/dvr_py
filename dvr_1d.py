@@ -511,6 +511,17 @@ class VFactory(object):
             return V
         return V
 
+    def marcus_adia(self, k1=1, dx=3, dG=0, k2=None, w=None):
+        if k2 is None:
+            k2 = k1
+        if w is None:
+            w = 0.01 * (k1 + k2)
+        def V(x):
+            v1 = 0.5 * k1 * (x + dx/2)**2 + dG
+            v2 = 0.5 * k2 * (x - dx/2)**2
+            return 0.5 * (v1 + v2) - 0.5 * ((v1-v2)**2 + 4*w)**0.5
+        return V
+
     def double_well(self, x1 = -2., x2 = -1., x3 = 1., 
                     x4 = 2., V1 = 1., V2 = 0., 
                     V3 = 1., V4 = 0., V5 = 1.):
