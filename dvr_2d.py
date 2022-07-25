@@ -48,7 +48,7 @@ class DVR(object):
         user senderle on stackoverflow.com"""
         broadcastable = np.ix_(*arrays)
         broadcasted = np.broadcast_arrays(*broadcastable)
-        rows, cols = reduce(np.multiply, broadcasted[0].shape), len(broadcasted)
+        rows, cols = np.prod(broadcasted[0].shape), len(broadcasted)
         out = np.empty(rows * cols, dtype=broadcasted[0].dtype)
         start, end = 0, rows
         for a in broadcasted:
@@ -120,12 +120,12 @@ class DVR(object):
             if i == 0:
                 ax.plot_surface(xy[:,:,0], xy[:,:,1], 
                     uscale * abs(U[:, i].reshape((npts, npts))) + E[i], 
-                    alpha=0.3, color=colors[i],
+                    alpha=0.3, cmap=plt.cm.coolwarm,
                     rstride=2, cstride=2)
             else:
                 ax.plot_surface(xy[:,:,0], xy[:,:,1], 
                     uscale * U[:, i].reshape((npts, npts)) + E[i], 
-                    alpha=0.3, color=colors[i],
+                    alpha=0.3, cmap=plt.cm.coolwarm,
                     rstride=2, cstride=2)
         ax.set_xlim3d(xmin, xmax)
         ax.set_ylim3d(ymin, ymax)
@@ -153,8 +153,8 @@ class DVR(object):
         precision = kwargs.get('precision', 8)
 
         # Print and plot stuff
-        print 'The first {n:d} energies are:'.format(n=num_eigs)
-        print np.array_str(E[:num_eigs], precision=precision)
+        print('The first {n:d} energies are:'.format(n=num_eigs))
+        print(np.array_str(E[:num_eigs], precision=precision))
 
         doshow = kwargs.get('doshow', False)
         if doshow:
@@ -177,7 +177,7 @@ class DVR(object):
 
     def sho_test(self, k = 1., num_eigs=5, precision=8, 
                  uscale=1., doshow=False):
-        print 'Testing 2-D DVR with an SHO potential'
+        print('Testing 2-D DVR with an SHO potential')
         vF = VFactory()
         V = vF.sho(k=k)
         E, U = self.test_potential(V, doshow=doshow, num_eigs=num_eigs, 
@@ -185,7 +185,6 @@ class DVR(object):
                                    xmin=-3.5, xmax=3.5, 
                                    ymin=-3.5, ymax=3.5,
                                    zmin=-0.05, zmax=4.)
-        print
         return E, U
 
 # Factory functions to build different potentials:

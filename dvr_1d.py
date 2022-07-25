@@ -56,9 +56,9 @@ class DVR(object):
         plt.plot(self.x, V(self.x))
         for i in range(nplot):
             if i == 0:
-                plt.plot(self.x, abs(U[:, i])+E[i])
+                plt.fill_between(self.x, abs(U[:, i]) + E[i], E[i])
             else:
-                plt.plot(self.x, U[:, i]+E[i])
+                plt.fill_between(self.x, U[:, i] + E[i], E[i])
         plt.axis(ymax=ymax, ymin=ymin)
         plt.axis(xmax=xmax, xmin=xmin)
         if doshow: plt.show()
@@ -89,8 +89,8 @@ class DVR(object):
         precision = kwargs.get('precision', 8)
 
         # Print and plot stuff
-        print 'The first {n:d} energies are:'.format(n=num_eigs)
-        print np.array_str(E[:num_eigs], precision=precision)
+        print('The first {n:d} energies are:'.format(n=num_eigs))
+        print(np.array_str(E[:num_eigs], precision=precision))
         self.plot(V, E, U, nplot=num_eigs, 
                   xmin=xmin, xmax=xmax,
                   ymin=ymin, ymax=ymax, 
@@ -98,20 +98,19 @@ class DVR(object):
         return
 
     def inf_square_well_test(self, precision=8):
-        print 'Testing 1-D DVR with an infinite square-well potential'
+        print('Testing 1-D DVR with an infinite square-well potential')
         vF = VFactory()
         V = vF.square_well(depth=1e30, width=10.)
         self.test_potential(V, num_eigs=5, precision=precision, 
                             xmin=-10., xmax=10., 
                             ymin=-0.25, ymax=2.)
         e_exact = np.square(np.arange(1,6)) * np.pi**2. / 2. / 10.**2.
-        print "Compare to the exact energies:"
-        print np.array_str(e_exact, precision=precision)
-        print
+        print("Compare to the exact energies:")
+        print(np.array_str(e_exact, precision=precision))
         return
 
     def square_well_test(self, precision=8):
-        print 'Testing 1-D DVR with a finite square-well potential'
+        print('Testing 1-D DVR with a finite square-well potential')
         vF = VFactory()
         V = vF.square_well(depth=9./2., width=10.)
         self.test_potential(V, num_eigs=5, precision=precision, 
@@ -119,60 +118,55 @@ class DVR(object):
                             ymin=-0.25, ymax=2.)
         e_exact = 9./2. * np.array([0.009636, 0.038522, 0.086582, 
                                     0.153683, 0.239608])
-        print "Compare to these energies:"
-        print np.array_str(e_exact, precision=precision)
-        print "from: http://pilotscholars.up.edu/phy_facpubs/8\n"
+        print("Compare to these energies:")
+        print(np.array_str(e_exact, precision=precision))
+        print("from: http://pilotscholars.up.edu/phy_facpubs/8\n")
         return
 
     def double_well_test(self, precision=8):
-        print 'Testing 1-D DVR with a double-well potential'
+        print('Testing 1-D DVR with a double-well potential')
         vF = VFactory()
         V = vF.double_well()
         self.test_potential(V, num_eigs=5, precision=precision,
                             xmin=-3.5, xmax=3.5, 
                             ymin=-0.5, ymax=4.)
-        print
         return
 
     def sho_test(self, k=1., num_eigs=5, precision=8, 
             xmin=-3.5, xmax=3.5, ymin=0., ymax=6.):
-        print 'Testing 1-D DVR with an SHO potential'
+        print('Testing 1-D DVR with an SHO potential')
         vF = VFactory()
         V = vF.sho(k=k)
         self.test_potential(V, num_eigs=num_eigs, 
                             precision=precision,
                             xmin=xmin, xmax=xmax, 
                             ymin=ymin, ymax=ymax)
-        print
         return
 
     def morse_test(self, precision=8, xmin=0., xmax=32., ymin=-3., ymax=1.):
-        print 'Testing 1-D DVR with a Morse potential'
+        print('Testing 1-D DVR with a Morse potential')
         vF = VFactory()
         V = vF.morse(D=3., a=0.5)
         self.test_potential(V, num_eigs=5, precision=precision,
                             xmin=xmin, xmax=xmax, 
                             ymin=ymin, ymax=ymax)
-        print
         return
 
     def sombrero_test(self, precision=8):
-        print 'Testing 1-D DVR with a sombrero potential'
+        print('Testing 1-D DVR with a sombrero potential')
         vF = VFactory()
         V = vF.sombrero(a=-5.)
         self.test_potential(V, num_eigs=5, precision=precision,
                             xmin=-5., xmax=5., ymax=5.)
-        print
         return
 
     def woods_saxon_test(self, precision=8):
-        print 'Testing 1-D DVR with a Woods-Saxon potential'
+        print('Testing 1-D DVR with a Woods-Saxon potential')
         vF = VFactory()
         V = vF.woods_saxon(A=4)
         self.test_potential(V, num_eigs=5, precision=precision,
                             xmin=0., xmax=5., 
                             ymin=-50., ymax=0.)
-        print
         return
 
     def test_all(self, precision=8):

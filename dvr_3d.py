@@ -48,7 +48,7 @@ class DVR(object):
         user senderle on stackoverflow.com"""
         broadcastable = np.ix_(*arrays)
         broadcasted = np.broadcast_arrays(*broadcastable)
-        rows, cols = reduce(np.multiply, broadcasted[0].shape), len(broadcasted)
+        rows, cols = np.prod(broadcasted[0].shape), len(broadcasted)
         out = np.empty(rows * cols, dtype=broadcasted[0].dtype)
         start, end = 0, rows
         for a in broadcasted:
@@ -109,8 +109,8 @@ class DVR(object):
         # then we need to use np.linalg.eigh()
         do_full_eig = kwargs.get('do_full_eig', False)
         if do_full_eig or (num_eigs == h.shape[0]): 
-            print h.ndim
-            print len(h.shape)
+            print(h.ndim)
+            print(len(h.shape))
             E, U = np.linalg.eigh(h)
         # But if we don't need all eigenvalues, only the smallest ones,
         # then when the size of the H matrix becomes large enough, it is
@@ -124,8 +124,8 @@ class DVR(object):
         precision = kwargs.get('precision', 8)
 
         # Print and plot stuff
-        print 'The first {n:d} energies are:'.format(n=num_eigs)
-        print np.array_str(E[:num_eigs], precision=precision)
+        print('The first {n:d} energies are:'.format(n=num_eigs))
+        print(np.array_str(E[:num_eigs], precision=precision))
 
         doshow = kwargs.get('doshow', False)
         assert doshow==False, \
@@ -150,7 +150,7 @@ class DVR(object):
 
     def sho_test(self, k = 1., num_eigs=5, precision=8, 
                  uscale=1., doshow=False, do_full_eig=False):
-        print 'Testing 3-D DVR with an SHO potential'
+        print('Testing 3-D DVR with an SHO potential')
         vF = VFactory()
         V = vF.sho(k=k)
         E, U = self.test_potential(V, doshow=doshow, num_eigs=num_eigs, 
@@ -159,7 +159,6 @@ class DVR(object):
                                    xmin=-3.5, xmax=3.5, 
                                    ymin=-3.5, ymax=3.5,
                                    zmin=-0.05, zmax=4.)
-        print
         return E, U
 
 # Factory functions to build different potentials:
