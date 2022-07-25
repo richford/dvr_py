@@ -103,5 +103,5 @@ if __name__=="__main__":
     y, mu = p.solve()
     psi = p.get_psi(y)
     plt.plot(p.basis.x, p.get_psi(y))
-    print 'mu = ', mu
+    print('mu = ', mu)
 
